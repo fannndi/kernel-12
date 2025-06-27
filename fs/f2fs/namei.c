@@ -21,6 +21,12 @@
 #include "xattr.h"
 #include "acl.h"
 #include <trace/events/f2fs.h>
+#include <linux/fscrypt.h>
+
+static inline bool f2fs_encrypted_inode(const struct inode *inode)
+{
+    return IS_ENCRYPTED(inode);
+}
 
 static struct inode *f2fs_new_inode(struct inode *dir, umode_t mode)
 {

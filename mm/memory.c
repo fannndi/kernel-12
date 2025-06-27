@@ -2753,7 +2753,7 @@ static int wp_page_copy(struct vm_fault *vmf)
 		if (!new_page)
 			goto out;
 
-		if (!cow_user_page(new_page, old_page, vmf->address)) {
+		if (!cow_user_page(new_page, old_page, vmf)) {
 			/*
 			 * COW failed, if the fault was solved by other,
 			 * it's fine. If not, userspace would re-fault on

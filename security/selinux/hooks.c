@@ -2200,11 +2200,10 @@ static inline u32 open_file_to_av(struct file *file)
 }
 
 /* Hook functions begin here. */
-
 static int selinux_binder_set_context_mgr(const struct cred *mgr)
 {
 	u32 mysid = current_sid();
-	u32 mgrsid = task_sid(mgr);
+	u32 mgrsid = cred_sid(mgr);
 
 	return avc_has_perm(&selinux_state,
 			    mysid, mgrsid, SECCLASS_BINDER,
@@ -2229,6 +2228,17 @@ static int selinux_binder_transaction(const struct cred *from,
 
 	return avc_has_perm(&selinux_state,
 			    fromsid, tosid, SECCLASS_BINDER, BINDER__CALL,
+			    NULL);
+}
+
+static int selinux_binder_transfer_binder(const struct cred *from,
+					  const struct cred *to)
+{
+	u32 fromsid = cred_sid(from);
+	u32 tosid = cred_sid(to);
+
+	return avc_has_perm(&selinux_state,
+			    fromsid, tosid, SECCLASS_BINDER, BINDER__TRANSFER,
 			    NULL);
 }
 

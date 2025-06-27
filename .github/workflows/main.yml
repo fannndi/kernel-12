@@ -51,7 +51,7 @@ jobs:
         run: |
           echo "TOOLCHAIN=$GITHUB_WORKSPACE/clang" >> $GITHUB_ENV
           echo "PATH=$GITHUB_WORKSPACE/clang/bin:$PATH" >> $GITHUB_ENV
-          echo "ZIP_NAME=MIUI-A10-PERF-${{ env.BUILD_TIME }}.zip" >> $GITHUB_ENV
+          echo "ZIP_NAME=MIUI-A12-NOS-${{ env.BUILD_TIME }}.zip" >> $GITHUB_ENV
 
       - name: Telegram - Start
         run: |

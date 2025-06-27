@@ -8877,6 +8877,11 @@ perf_event_parse_addr_filter(struct perf_event *event, char *fstr,
 
 	return 0;
 
+/* Tambahan untuk menghindari leak kalau kern_path() gagal */
+fail_free_name:
+	kfree(filename);
+	filename = NULL;
+
 fail:
 	kfree(filename);
 	free_filters_list(filters);

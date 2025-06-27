@@ -42,6 +42,14 @@
 #include "acl.h"
 
 #include <trace/events/ext4.h>
+#include <linux/fs.h>
+#include <linux/fscrypt.h>
+
+static inline bool ext4_encrypted_inode(const struct inode *inode)
+{
+    return IS_ENCRYPTED(inode);
+}
+
 /*
  * define how far ahead to read directories while searching them.
  */

@@ -1978,7 +1978,7 @@ void wb_workfn(struct work_struct *work)
 						struct bdi_writeback, dwork);
 	long pages_written;
 
-	set_worker_desc("flush-%s", bdi_dev_name(wb->bdi));
+	set_worker_desc("flush-%s", dev_name(wb->bdi->dev));
 	current->flags |= PF_SWAPWRITE;
 
 	if (likely(!current_is_workqueue_rescuer() ||
@@ -2093,6 +2093,28 @@ int dirtytime_interval_handler(struct ctl_table *table, int write,
 	if (ret == 0 && write)
 		mod_delayed_work(system_wq, &dirtytime_work, 0);
 	return ret;
+}
+
+static noinline void block_dump___mark_inode_dirty(struct inode *inode)
+{
+	if (inode->i_ino || strcmp(inode->i_sb->s_id, "bdev")) {
+		struct dentry *dentry;
+		const char *name = "?";
+
+		dentry = d_find_alias(inode);
+		if (dentry) {
+			spin_lock(&dentry->d_lock);
+			name = (const char *) dentry->d_name.name;
+		}
+		printk(KERN_DEBUG
+		       "%s(%d): dirtied inode %lu (%s) on %s\n",
+		       current->comm, task_pid_nr(current), inode->i_ino,
+		       name, inode->i_sb->s_id);
+		if (dentry) {
+			spin_unlock(&dentry->d_lock);
+			dput(dentry);
+		}
+	}
 }
 
 /**

@@ -4004,9 +4004,8 @@ static void clk_core_evict_parent_cache(struct clk_core *core)
 
 	lockdep_assert_held(&prepare_lock);
 
-	for (lists = all_lists; *lists; lists++)
-		hlist_for_each_entry(root, *lists, child_node)
-			clk_core_evict_parent_cache_subtree(root, core);
+	hlist_for_each_entry(root, *lists, child_node)
+		clk_core_evict_parent_cache_subtree(root, core);
 
 }
 

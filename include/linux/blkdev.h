@@ -135,7 +135,7 @@ struct request {
 	union {
 		struct __call_single_data csd;
 		u64 fifo_time;
-	};
+	} __attribute__((__aligned__(32)));
 
 	struct request_queue *q;
 	struct blk_mq_ctx *mq_ctx;

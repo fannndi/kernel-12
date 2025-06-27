@@ -2751,9 +2751,9 @@ static int wp_page_copy(struct vm_fault *vmf)
 		new_page = alloc_page_vma(GFP_HIGHUSER_MOVABLE, vma,
 				vmf->address);
 		if (!new_page)
-			goto oom;
+			goto out;
 
-		if (!cow_user_page(new_page, old_page, vmf)) {
+		if (!cow_user_page(new_page, old_page, vmf->address, vma)) {
 			/*
 			 * COW failed, if the fault was solved by other,
 			 * it's fine. If not, userspace would re-fault on

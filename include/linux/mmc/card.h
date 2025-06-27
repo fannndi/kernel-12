@@ -141,6 +141,8 @@ struct mmc_ext_csd {
 	u8			fw_version;		/* 254 */
 	unsigned int            feature_support;
 #define MMC_DISCARD_FEATURE	BIT(0)                  /* CMD38 feature */
+	u8 max_packed_reads;
+	u8 max_packed_writes;
 };
 
 struct sd_scr {

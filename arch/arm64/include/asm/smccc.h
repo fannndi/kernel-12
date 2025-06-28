@@ -71,4 +71,6 @@ static inline long call_smccc_arch_features(unsigned long func_id)
 	return res.a0;
 }
 
+u32 arm64_smccc_get_conduit(void);
+
 #endif /* __ASM_ARM_SMCCC_H */

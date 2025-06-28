@@ -86,9 +86,8 @@ static struct fasync_struct *fasync;
 static DEFINE_SPINLOCK(random_ready_chain_lock);
 static RAW_NOTIFIER_HEAD(random_ready_chain);
 
-/* Control how we warn userspace. */
-static struct ratelimit_state urandom_warning =
-	RATELIMIT_STATE_INIT_FLAGS("urandom_warning", HZ, 3, RATELIMIT_MSG_ON_RELEASE);
+DEFINE_RATELIMIT_STATE(urandom_warning, HZ, 3);
+
 static int ratelimit_disable __read_mostly =
 	IS_ENABLED(CONFIG_WARN_ALL_UNSEEDED_RANDOM);
 module_param_named(ratelimit_disable, ratelimit_disable, int, 0644);

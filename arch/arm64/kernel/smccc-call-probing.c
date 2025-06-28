@@ -13,7 +13,6 @@
 #include <asm/smp_plat.h>
 #include <asm/smccc.h>
 #include <linux/export.h>
-#include <asm/smccc.h>
 
 static u32 smccc_conduit = SMCCC_CONDUIT_NONE;
 
@@ -48,3 +47,9 @@ void arm64_update_smccc_conduit(u32 conduit)
     smccc_conduit = conduit;
 }
 EXPORT_SYMBOL_GPL(arm64_update_smccc_conduit);
+
+u32 arm64_smccc_get_conduit(void)
+{
+    return smccc_conduit;
+}
+EXPORT_SYMBOL_GPL(arm64_smccc_get_conduit);

@@ -17,7 +17,7 @@
 #include <linux/io.h>
 
 #include <soc/qcom/scm.h>
-
+#include <linux/random.h>
 #include <asm/cacheflush.h>
 
 #define TZ_SVC_CRYPTO	10

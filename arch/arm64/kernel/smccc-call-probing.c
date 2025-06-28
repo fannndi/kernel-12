@@ -12,6 +12,8 @@
 #include <asm/processor.h>
 #include <asm/smp_plat.h>
 #include <asm/smccc.h>
+#include <linux/export.h>
+#include <asm/smccc.h>
 
 static u32 smccc_conduit = SMCCC_CONDUIT_NONE;
 

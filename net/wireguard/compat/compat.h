@@ -329,12 +329,14 @@ static inline int wait_for_random_bytes(void)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0) && LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0) && !defined(ISRHEL8)
 #include <linux/random.h>
 #include <linux/slab.h>
-struct rng_is_initialized_callback {
-	struct random_ready_callback cb;
-	atomic_t *rng_state;
-};
+
 static inline void rng_is_initialized_callback(struct random_ready_callback *cb)
 {
+	struct rng_is_initialized_callback {
+		struct random_ready_callback cb;
+		atomic_t *rng_state;
+	};
+
 	struct rng_is_initialized_callback *rdy = container_of(cb, struct rng_is_initialized_callback, cb);
 	atomic_set(rdy->rng_state, 2);
 	kfree(rdy);
@@ -349,6 +351,7 @@ static inline int get_random_bytes_wait(void *buf, int nbytes)
 	get_random_bytes(buf, nbytes);
 	return 0;
 }
+#endif
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0) && !defined(ISRHEL7)

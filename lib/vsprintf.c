@@ -47,6 +47,7 @@
 
 #include <linux/string_helpers.h>
 #include "kstrtox.h"
+#include <linux/random.h>
 
 static unsigned long long simple_strntoull(const char *startp, size_t max_chars,
 					   char **endp, unsigned int base)

@@ -49,6 +49,14 @@
 #include "kstrtox.h"
 #include <linux/random.h>
 
+struct random_ready_callback {
+	struct module *owner;
+	void (*func)(struct random_ready_callback *);
+};
+
+extern int add_random_ready_callback(struct random_ready_callback *);
+extern void del_random_ready_callback(struct random_ready_callback *);
+
 static unsigned long long simple_strntoull(const char *startp, size_t max_chars,
 					   char **endp, unsigned int base)
 {

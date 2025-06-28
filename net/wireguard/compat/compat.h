@@ -12,6 +12,15 @@
 #include <generated/utsrelease.h>
 #include <linux/random.h>
 
+struct random_ready_callback {
+	struct module *owner;
+	void (*func)(struct random_ready_callback *);
+};
+
+extern int add_random_ready_callback(struct random_ready_callback *);
+extern void del_random_ready_callback(struct random_ready_callback *);
+
+
 #ifdef RHEL_MAJOR
 #if RHEL_MAJOR == 7
 #define ISRHEL7

@@ -25,8 +25,19 @@ jobs:
           echo "BUILD_START=$(date +%s)" >> $GITHUB_ENV
           sudo ln -sf /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
 
+      - name: Create 4GB Swap
+        run: |
+          sudo fallocate -l 4G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
       - name: Clean Old Output
-        run: rm -rf out
+        run: |
+          rm -rf out
+          make clean || true
+          make mrproper || true
 
       - name: Install Dependencies
         run: |
@@ -35,7 +46,7 @@ jobs:
             build-essential bc cpio flex bison git python-is-python3 wget curl \
             lz4 libssl-dev libelf-dev libncurses5-dev zstd device-tree-compiler \
             zip pigz rsync jq nano clang llvm lld ccache \
-            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi sparse
 
       - name: Download Clang r450784d (Google Clang Android 13)
         run: |
@@ -59,14 +70,6 @@ jobs:
             -d chat_id=${{ env.TELEGRAM_CHAT_ID }} \
             -d text="🚀 *Build Started!*\nClang: \`${{ steps.clang.outputs.version }}\`" \
             -d parse_mode=Markdown
-
-      - name: Create 4GB Swap
-        run: |
-          sudo fallocate -l 4G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
-          free -h
 
       - name: Make Defconfig
         run: |
@@ -95,6 +98,8 @@ jobs:
             LLVM=1 LLVM_IAS=1 \
             KBUILD_BUILD_USER=${{ env.BUILD_USER }} \
             KBUILD_BUILD_HOST=${{ env.BUILD_HOST }} \
+            KCFLAGS="-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers" \
+            W=1 V=0 \
             Image.gz dtbs 2>&1 | tee log.txt
 
           if [[ ! -f out/arch/arm64/boot/Image.gz ]]; then

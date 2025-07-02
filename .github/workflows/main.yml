@@ -19,7 +19,7 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@v3
 
-      - name: Set Timezone & Build Vars
+      - name: Set Timezone & Vars
         run: |
           BUILD_TIME=$(TZ=Asia/Jakarta date '+%d%m%Y-%H%M')
           BUILD_ID=$(TZ=Asia/Jakarta date '+%Y%m%d%H%M%S')
@@ -36,7 +36,7 @@ jobs:
           sudo mkswap /swapfile
           sudo swapon /swapfile
 
-      - name: Clean Output Folder
+      - name: Clean Output
         run: rm -rf out
 
       - name: Install Dependencies
@@ -48,7 +48,7 @@ jobs:
             zip pigz rsync jq nano clang llvm lld \
             gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
-      - name: Download Clang r450784d (Google Clang Android 13)
+      - name: Download Clang r450784d
         run: |
           mkdir clang
           wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/android13-release/clang-r450784d.tar.gz -O clang.tar.gz
@@ -81,6 +81,7 @@ jobs:
           MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
           CORES=$(nproc)
           JOBS=$(( (MEM/1024/1024) < 4 ? 2 : (MEM/1024/1024) < 8 ? 4 : CORES+2 ))
+
           echo "🧱 Compiling with -j$JOBS"
 
           script -q -c "make -j$JOBS O=out \
@@ -93,7 +94,7 @@ jobs:
             LLVM=1 LLVM_IAS=1 \
             KBUILD_BUILD_USER=${{ env.BUILD_USER }} \
             KBUILD_BUILD_HOST=${{ env.BUILD_HOST }} \
-            Image.gz dtbs dtboimg" log.txt
+            Image.gz dtbs" log.txt
 
           test -f out/arch/arm64/boot/Image.gz || { echo "❌ Image.gz not found!"; exit 1; }
 
@@ -104,10 +105,17 @@ jobs:
       - name: Create Boot Images
         run: |
           cat out/arch/arm64/boot/Image.gz out/arch/arm64/boot/dts/**/*.dtb > out/arch/arm64/boot/Image.gz-dtb
-          test -f out/arch/arm64/boot/Image.gz-dtb || { echo "❌ Image.gz-dtb not found!"; exit 1; }
+          cp out/arch/arm64/boot/Image.gz-dtb .
 
-          cp out/arch/arm64/boot/dtb.img . || echo "❗ dtb.img not found, skipping."
-          cp out/arch/arm64/boot/dtbo.img . || echo "❗ dtbo.img not found, skipping."
+          # Optional: Create dtb.img and dtbo.img
+          [ -f out/arch/arm64/boot/dtb.img ] && cp out/arch/arm64/boot/dtb.img . || echo "❗ dtb.img not found."
+          
+          DTBO_PATH=$(find out/arch/arm64/boot/dts/ -name '*.dtbo' 2>/dev/null | head -n1)
+          if [[ -n "$DTBO_PATH" ]]; then
+            mkdtimg create dtbo.img --dtbo-path out/arch/arm64/boot/dts/ $(find out/arch/arm64/boot/dts/ -name '*.dtbo')
+          else
+            echo "❗ No .dtbo files found. Skipping dtbo.img creation."
+          fi
 
       - name: Upload Log
         if: always()
@@ -129,11 +137,10 @@ jobs:
         if: success()
         run: |
           git clone --depth=1 https://github.com/rinnsakaguchi/AnyKernel3 -b FSociety AnyKernel3
-          cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
+          cp Image.gz-dtb AnyKernel3/
           [ -f dtb.img ] && cp dtb.img AnyKernel3/
           [ -f dtbo.img ] && cp dtbo.img AnyKernel3/
-          cd AnyKernel3 || exit 1
-          zip -r9 ../${{ env.ZIP_NAME }} ./*
+          cd AnyKernel3 && zip -r9 ../${{ env.ZIP_NAME }} ./*
 
       - name: Telegram - Success
         if: success()

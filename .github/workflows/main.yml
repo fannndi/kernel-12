@@ -48,14 +48,6 @@ jobs:
             zip pigz rsync jq nano clang llvm lld \
             gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
-      - name: Download mkdtimg (Prebuilt)
-        run: |
-          mkdir -p tools
-          wget -q https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/master/mkdtimg.tar.gz -O tools/mkdtimg.tar.gz
-          tar -xf tools/mkdtimg.tar.gz -C tools
-          chmod +x tools/mkdtimg
-          echo "$GITHUB_WORKSPACE/tools" >> $GITHUB_PATH
-
       - name: Download Clang r487747c (Android 14)
         run: |
           mkdir clang
@@ -64,6 +56,13 @@ jobs:
           rm -f clang.tar.gz
           echo "$GITHUB_WORKSPACE/clang/bin" >> $GITHUB_PATH
           echo "TOOLCHAIN=$GITHUB_WORKSPACE/clang" >> $GITHUB_ENV
+
+      - name: Download mkdtimg (Prebuilt from AOSP)
+        run: |
+          mkdir -p tools
+          wget -q https://android.googlesource.com/platform/system/tools/mkbootimg/+/refs/heads/android-14.0.0_r0.43/prebuilt_linux-x86_64/mkdtimg?format=TEXT -O - | base64 -d > tools/mkdtimg
+          chmod +x tools/mkdtimg
+          echo "$GITHUB_WORKSPACE/tools" >> $GITHUB_PATH
 
       - name: Get Clang Version
         id: clang
@@ -119,7 +118,7 @@ jobs:
 
           DTBO_PATH=$(find out/arch/arm64/boot/dts/ -name '*.dtbo' 2>/dev/null | head -n1)
           if [[ -n "$DTBO_PATH" ]]; then
-            tools/mkdtimg create dtbo.img --dtbo-path out/arch/arm64/boot/dts/ $(find out/arch/arm64/boot/dts/ -name '*.dtbo')
+            mkdtimg create dtbo.img --dtbo-path out/arch/arm64/boot/dts/ $(find out/arch/arm64/boot/dts/ -name '*.dtbo')
           else
             echo "❗ No .dtbo files found. Skipping dtbo.img creation."
           fi

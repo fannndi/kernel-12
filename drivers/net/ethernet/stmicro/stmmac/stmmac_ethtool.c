@@ -411,6 +411,7 @@ stmmac_ethtool_set_link_ksettings(struct net_device *dev,
 			ADVERTISED_10baseT_Full);
 
 		mutex_lock(&priv->lock);
+		mutex_lock(&priv->lock);
 
 		if (priv->hw->mac->pcs_ctrl_ane)
 			priv->hw->mac->pcs_ctrl_ane(priv->ioaddr, 1,

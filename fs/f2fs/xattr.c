@@ -225,6 +225,9 @@ static inline const struct xattr_handler *f2fs_xattr_handler(int index)
 static struct f2fs_xattr_entry *__find_xattr(void *base_addr,
 				void *last_base_addr, int index,
 				size_t len, const char *name)
+static struct f2fs_xattr_entry *__find_xattr(void *base_addr,
+				void *last_base_addr, int index,
+				size_t len, const char *name)
 {
 	struct f2fs_xattr_entry *entry;
 
@@ -329,6 +332,7 @@ static int lookup_all_xattrs(struct inode *inode, struct page *ipage,
 	unsigned int inline_size = inline_xattr_size(inode);
 	int err = 0;
 
+	if (!xnid && !inline_size)
 	if (!xnid && !inline_size)
 		return -ENODATA;
 
@@ -560,6 +564,7 @@ out:
 ssize_t f2fs_listxattr(struct dentry *dentry, char *buffer, size_t buffer_size)
 {
 	struct inode *inode = d_inode(dentry);
+	nid_t xnid = F2FS_I(inode)->i_xattr_nid;
 	struct f2fs_xattr_entry *entry;
 	void *base_addr, *last_base_addr;
 	int error = 0;

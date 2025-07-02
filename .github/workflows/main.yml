@@ -26,7 +26,7 @@ jobs:
           echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
           echo "BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
           echo "BUILD_START=$(date +%s)" >> $GITHUB_ENV
-          echo "ZIP_NAME=MIUI-A15-NOS-${BUILD_TIME}.zip" >> $GITHUB_ENV
+          echo "ZIP_NAME=MIUI-A12-NOS-${BUILD_TIME}.zip" >> $GITHUB_ENV
           sudo ln -sf /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
 
       - name: Create Swap
@@ -48,10 +48,10 @@ jobs:
             zip pigz rsync jq nano clang llvm lld \
             gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
-      - name: Download Clang r522817 (Android 15)
+      - name: Download Clang r536225 (Android 15)
         run: |
           mkdir clang
-          wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r522817.tar.gz -O clang.tar.gz
+          wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/android-15.0.0_r1/clang-r536225.tar.gz -O clang.tar.gz
           tar -xf clang.tar.gz -C clang
           rm -f clang.tar.gz
           echo "$GITHUB_WORKSPACE/clang/bin" >> $GITHUB_PATH

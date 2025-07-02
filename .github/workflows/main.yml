@@ -45,23 +45,21 @@ jobs:
           sudo apt install -y \
             build-essential bc cpio flex bison git python-is-python3 wget curl \
             lz4 libssl-dev libelf-dev libncurses5-dev zstd device-tree-compiler \
-            zip pigz rsync jq nano clang llvm lld ccache \
+            zip pigz rsync jq nano clang llvm lld \
             gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
-      - name: Download Latest Clang (ZyCromerZ)
+      - name: Download Clang r450784d (Google Clang Android 13)
         run: |
-          CLANG_LINK=$(curl -s https://raw.githubusercontent.com/ZyCromerZ/Clang/main/Clang-main-link.txt)
           mkdir clang
-          curl -L "$CLANG_LINK" -o clang.tar.gz
+          wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/android13-release/clang-r450784d.tar.gz -O clang.tar.gz
           tar -xf clang.tar.gz -C clang
           rm -f clang.tar.gz
           echo "$GITHUB_WORKSPACE/clang/bin" >> $GITHUB_PATH
           echo "TOOLCHAIN=$GITHUB_WORKSPACE/clang" >> $GITHUB_ENV
-          [ -x clang/bin/clang ] || { echo "❌ Clang not extracted properly!"; exit 1; }
 
       - name: Get Clang Version
         id: clang
-        run: echo "version=$(./clang/bin/clang --version | head -n1)" >> $GITHUB_OUTPUT
+        run: echo "version=$(clang/bin/clang --version | head -n1)" >> $GITHUB_OUTPUT
 
       - name: Telegram - Start
         run: |
@@ -82,10 +80,10 @@ jobs:
 
           MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
           CORES=$(nproc)
-          JOBS=$(( (MEM/1024/1024) < 4 ? 2 : (MEM/1024/1024) < 8 ? 4 : (CORES > 8 ? 8 : CORES+2) ))
+          JOBS=$(( (MEM/1024/1024) < 4 ? 2 : (MEM/1024/1024) < 8 ? 4 : CORES+2 ))
           echo "🧱 Compiling with -j$JOBS"
 
-          stdbuf -oL -eL script -q -c "make -j$JOBS O=out \
+          script -q -c "make -j$JOBS O=out \
             ARCH=arm64 \
             LD=ld.lld AS=llvm-as AR=llvm-ar NM=llvm-nm \
             OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip \
@@ -95,7 +93,7 @@ jobs:
             LLVM=1 LLVM_IAS=1 \
             KBUILD_BUILD_USER=${{ env.BUILD_USER }} \
             KBUILD_BUILD_HOST=${{ env.BUILD_HOST }} \
-            Image.gz dtbs" log.txt
+            Image.gz dtbs dtboimg" log.txt
 
           test -f out/arch/arm64/boot/Image.gz || { echo "❌ Image.gz not found!"; exit 1; }
 
@@ -103,10 +101,13 @@ jobs:
         if: success()
         run: cp out/.config arch/arm64/configs/${{ env.KERNEL_DEFCONFIG }}
 
-      - name: Create Image.gz-dtb
+      - name: Create Boot Images
         run: |
           cat out/arch/arm64/boot/Image.gz out/arch/arm64/boot/dts/**/*.dtb > out/arch/arm64/boot/Image.gz-dtb
           test -f out/arch/arm64/boot/Image.gz-dtb || { echo "❌ Image.gz-dtb not found!"; exit 1; }
+
+          cp out/arch/arm64/boot/dtb.img . || echo "❗ dtb.img not found, skipping."
+          cp out/arch/arm64/boot/dtbo.img . || echo "❗ dtbo.img not found, skipping."
 
       - name: Upload Log
         if: always()
@@ -118,10 +119,9 @@ jobs:
       - name: Telegram - Log on Fail
         if: failure()
         run: |
-          tail -n 100 log.txt > lastlog.txt
           curl -s -X POST https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendDocument \
             -F chat_id=${{ env.TELEGRAM_CHAT_ID }} \
-            -F document=@lastlog.txt \
+            -F document=@log.txt \
             -F caption="❌ *Build Failed*\n🆔 \`${{ env.BUILD_ID }}\`\nClang: \`${{ steps.clang.outputs.version }}\`" \
             -F parse_mode=Markdown
 
@@ -130,6 +130,8 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/rinnsakaguchi/AnyKernel3 -b FSociety AnyKernel3
           cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
+          [ -f dtb.img ] && cp dtb.img AnyKernel3/
+          [ -f dtbo.img ] && cp dtbo.img AnyKernel3/
           cd AnyKernel3 || exit 1
           zip -r9 ../${{ env.ZIP_NAME }} ./*
 

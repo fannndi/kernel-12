@@ -85,7 +85,6 @@ jobs:
           JOBS=$(( (MEM/1024/1024) < 4 ? 2 : (MEM/1024/1024) < 8 ? 4 : (CORES > 8 ? 8 : CORES+2) ))
           echo "🧱 Compiling with -j$JOBS"
 
-          ulimit -n 1048576
           stdbuf -oL -eL script -q -c "make -j$JOBS O=out \
             ARCH=arm64 \
             LD=ld.lld AS=llvm-as AR=llvm-ar NM=llvm-nm \

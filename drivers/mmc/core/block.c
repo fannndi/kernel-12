@@ -49,6 +49,9 @@
 #include <linux/mmc/sd.h>
 
 #include <linux/uaccess.h>
+#include <linux/device.h>
+#include <linux/cdev.h>
+#include <linux/list.h>
 
 #include "queue.h"
 #include "block.h"
@@ -59,6 +62,10 @@
 #include "mmc_ops.h"
 #include "quirks.h"
 #include "sd_ops.h"
+
+DEFINE_IDA(mmc_rpmb_ida);
+dev_t mmc_rpmb_devt;
+struct bus_type mmc_rpmb_bus_type;
 
 MODULE_ALIAS("mmc:block");
 #ifdef MODULE_PARAM_PREFIX
@@ -3937,13 +3944,11 @@ static long mmc_rpmb_ioctl(struct file *filp, unsigned int cmd,
 	switch (cmd) {
 	case MMC_IOC_CMD:
 		ret = mmc_blk_ioctl_cmd(rpmb->md,
-					(struct mmc_ioc_cmd __user *)arg,
-					rpmb);
+					(struct mmc_ioc_cmd __user *)arg);
 		break;
 	case MMC_IOC_MULTI_CMD:
 		ret = mmc_blk_ioctl_multi_cmd(rpmb->md,
-					(struct mmc_ioc_multi_cmd __user *)arg,
-					rpmb);
+					(struct mmc_ioc_multi_cmd __user *)arg);
 		break;
 	default:
 		ret = -EINVAL;

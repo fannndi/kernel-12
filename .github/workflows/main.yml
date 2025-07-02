@@ -46,12 +46,12 @@ jobs:
             build-essential bc cpio flex bison git python-is-python3 wget curl \
             lz4 libssl-dev libelf-dev libncurses5-dev zstd device-tree-compiler \
             zip pigz rsync jq nano clang llvm lld \
-            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi mkdtimg
 
-      - name: Download Clang r450784d
+      - name: Download Clang r487747c (Android 14)
         run: |
           mkdir clang
-          wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/android13-release/clang-r450784d.tar.gz -O clang.tar.gz
+          wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/android14-release/clang-r487747c.tar.gz -O clang.tar.gz
           tar -xf clang.tar.gz -C clang
           rm -f clang.tar.gz
           echo "$GITHUB_WORKSPACE/clang/bin" >> $GITHUB_PATH
@@ -107,9 +107,8 @@ jobs:
           cat out/arch/arm64/boot/Image.gz out/arch/arm64/boot/dts/**/*.dtb > out/arch/arm64/boot/Image.gz-dtb
           cp out/arch/arm64/boot/Image.gz-dtb .
 
-          # Optional: Create dtb.img and dtbo.img
           [ -f out/arch/arm64/boot/dtb.img ] && cp out/arch/arm64/boot/dtb.img . || echo "❗ dtb.img not found."
-          
+
           DTBO_PATH=$(find out/arch/arm64/boot/dts/ -name '*.dtbo' 2>/dev/null | head -n1)
           if [[ -n "$DTBO_PATH" ]]; then
             mkdtimg create dtbo.img --dtbo-path out/arch/arm64/boot/dts/ $(find out/arch/arm64/boot/dts/ -name '*.dtbo')

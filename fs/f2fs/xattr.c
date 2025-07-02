@@ -225,9 +225,6 @@ static inline const struct xattr_handler *f2fs_xattr_handler(int index)
 static struct f2fs_xattr_entry *__find_xattr(void *base_addr,
 				void *last_base_addr, int index,
 				size_t len, const char *name)
-static struct f2fs_xattr_entry *__find_xattr(void *base_addr,
-				void *last_base_addr, int index,
-				size_t len, const char *name)
 {
 	struct f2fs_xattr_entry *entry;
 

@@ -101,7 +101,6 @@ jobs:
             LLVM=1 LLVM_IAS=1 \
             KBUILD_BUILD_USER=${{ env.BUILD_USER }} \
             KBUILD_BUILD_HOST=${{ env.BUILD_HOST }} \
-            EXTRA_CFLAGS='-Wno-error=stringop-overflow -Wno-error=incompatible-pointer-types' \
             Image.gz dtbs" log.txt
 
           test -f out/arch/arm64/boot/Image.gz || { echo "❌ Image.gz not found!"; exit 1; }

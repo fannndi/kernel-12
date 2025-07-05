@@ -8,6 +8,10 @@
 
 #ifdef __KERNEL__
 
+#ifndef __rticdata
+#define __rticdata __attribute__((section(".rticdata")))
+#endif
+
 /*
  * Note: DISABLE_BRANCH_PROFILING can be used by special lowlevel code
  * to disable branch tracing on a per file basis.

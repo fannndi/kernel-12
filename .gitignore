@@ -142,3 +142,4 @@ Android.bp
 /builds/
 *.zip
 build.logout/
+out/

@@ -202,7 +202,6 @@ int config_ep_by_speed_and_alt(struct usb_gadget *g,
 		return -EIO;
 	}
 
-
 	/* find correct alternate setting descriptor */
 	for_each_desc(speed_desc, d_spd, USB_DT_INTERFACE) {
 		int_desc = (struct usb_interface_descriptor *)*d_spd;
@@ -966,7 +965,7 @@ static int set_config(struct usb_composite_dev *cdev,
 	if (!c)
 		goto done;
 
-	place_marker("M - USB Device is enumerated");
+	update_marker("M - USB Device is enumerated");
 	usb_gadget_set_state(gadget, USB_STATE_CONFIGURED);
 	cdev->config = c;
 
@@ -1763,6 +1762,18 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	u16				w_length = le16_to_cpu(ctrl->wLength);
 	struct usb_function		*f = NULL;
 	u8				endp;
+
+	if (w_length > USB_COMP_EP0_BUFSIZ) {
+		if (ctrl->bRequestType == USB_DIR_OUT) {
+			goto done;
+		} else {
+			/* Cast away the const, we are going to overwrite on purpose. */
+			__le16 *temp = (__le16 *)&ctrl->wLength;
+
+			*temp = cpu_to_le16(USB_COMP_EP0_BUFSIZ);
+			w_length = USB_COMP_EP0_BUFSIZ;
+		}
+	}
 
 	/* partial re-init of the response message; the function or the
 	 * gadget might need to intercept e.g. a control-OUT completion

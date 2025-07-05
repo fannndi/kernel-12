@@ -130,4 +130,15 @@ kernel/configs/android-*.cfg
 #Ignoring Android.bp link file
 #
 Android.bp
-out/
+
+#
+# [Local Build] Custom additions for Gitpod/local environment
+#
+/out/
+/clang/
+/gcc64/
+/gcc32/
+/toolchain/
+/builds/
+*.zip
+build.log

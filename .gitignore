@@ -141,4 +141,4 @@ Android.bp
 /toolchain/
 /builds/
 *.zip
-build.log
+build.logout/

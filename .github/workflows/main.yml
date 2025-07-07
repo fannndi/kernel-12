@@ -112,15 +112,14 @@ jobs:
           export CLANG_TRIPLE=aarch64-linux-gnu-
           export KBUILD_COMPILER_STRING="${{ steps.clang.outputs.version }}"
 
-          MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-          CORES=$(nproc)
-          JOBS=$(( (MEM/1024/1024) < 4 ? 2 : (MEM/1024/1024) < 8 ? 4 : CORES+2 ))
-          echo "🧱 Compiling with -j$JOBS"
+          JOBS=$(nproc)
+          echo "🧱 Compiling with -j$JOBS (precise mode)"
 
-          script -q -c "make -j$JOBS O=out ARCH=arm64 \
+          nice -n 10 script -q -c "make -j$JOBS O=out ARCH=arm64 \
             CC=clang LD=ld.lld AS=llvm-as AR=llvm-ar NM=llvm-nm \
             OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip \
             CLANG_TRIPLE=$CLANG_TRIPLE LLVM=1 LLVM_IAS=1 \
+            KBUILD_VERBOSE=2 V=1 \
             KBUILD_BUILD_USER=${{ env.BUILD_USER }} \
             KBUILD_BUILD_HOST=${{ env.BUILD_HOST }} \
             Image.gz dtbs" log.txt

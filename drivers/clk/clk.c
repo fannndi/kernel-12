@@ -3999,6 +3999,7 @@ static void clk_core_evict_parent_cache_subtree(struct clk_core *root,
 /* Remove this clk from all parent caches */
 static void clk_core_evict_parent_cache(struct clk_core *core)
 {
+#ifdef CONFIG_DEBUG_FS
 	struct hlist_head **lists;
 	struct clk_core *root;
 
@@ -4007,7 +4008,7 @@ static void clk_core_evict_parent_cache(struct clk_core *core)
 	for (lists = all_lists; *lists; lists++)
 		hlist_for_each_entry(root, *lists, child_node)
 			clk_core_evict_parent_cache_subtree(root, core);
-
+#endif
 }
 
 /**

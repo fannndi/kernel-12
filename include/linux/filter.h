@@ -1026,4 +1026,10 @@ struct bpf_sock_ops_kern {
 	};
 };
 
+/* Tambahkan di sini, sebelum #endif */
+#ifndef BPF_SKB_MAX_LEN
+#define BPF_SKB_MAX_LEN 0xffffU
+#endif
+
 #endif /* __LINUX_FILTER_H__ */
+

@@ -8769,6 +8769,7 @@ perf_event_parse_addr_filter(struct perf_event *event, char *fstr,
 		case IF_ACT_FILTER:
 		case IF_ACT_START:
 			filter->filter = 1;
+			/* fall through */
 
 		case IF_ACT_STOP:
 			if (state != IF_STATE_ACTION)
@@ -8780,6 +8781,7 @@ perf_event_parse_addr_filter(struct perf_event *event, char *fstr,
 		case IF_SRC_KERNELADDR:
 		case IF_SRC_KERNEL:
 			kernel = 1;
+			/* fall through */
 
 		case IF_SRC_FILEADDR:
 		case IF_SRC_FILE:
@@ -8856,8 +8858,7 @@ perf_event_parse_addr_filter(struct perf_event *event, char *fstr,
 
 				ret = -EINVAL;
 				if (!filter->path.dentry ||
-				    !S_ISREG(d_inode(filter->path.dentry)
-					     ->i_mode))
+				    !S_ISREG(d_inode(filter->path.dentry)->i_mode))
 					goto fail;
 
 				event->addr_filters.nr_file_filters++;
@@ -8874,14 +8875,16 @@ perf_event_parse_addr_filter(struct perf_event *event, char *fstr,
 
 	kfree(filename);
 	kfree(orig);
-
 	return 0;
+
+fail_free_name:
+	kfree(filename);
+	filename = NULL;
 
 fail:
 	kfree(filename);
 	free_filters_list(filters);
 	kfree(orig);
-
 	return ret;
 }
 

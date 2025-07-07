@@ -1392,6 +1392,7 @@ static int ep_create_wakeup_source(struct epitem *epi)
 {
 	struct name_snapshot n;
 	struct wakeup_source *ws;
+	const char *name = "epitem";
 
 	if (!epi->ep->ws) {
 		epi->ep->ws = wakeup_source_register(NULL, "eventpoll");
@@ -1399,11 +1400,14 @@ static int ep_create_wakeup_source(struct epitem *epi)
 			return -ENOMEM;
 	}
 
-	name = epi->ffd.file->f_path.dentry->d_name.name;
-	ws = wakeup_source_register(NULL, name);
+	/* Proteksi terhadap kemungkinan file atau dentry NULL */
+	if (epi->ffd.file && epi->ffd.file->f_path.dentry)
+		name = epi->ffd.file->f_path.dentry->d_name.name;
 
+	ws = wakeup_source_register(NULL, name);
 	if (!ws)
 		return -ENOMEM;
+
 	rcu_assign_pointer(epi->ws, ws);
 
 	return 0;

@@ -7653,6 +7653,14 @@ static int ufshcd_eh_device_reset_handler(struct scsi_cmnd *cmd)
 	host = cmd->device->host;
 	hba = shost_priv(host);
 
+	if (!cmd->request) {
+		dev_err(hba->dev, "%s: cmd->request is NULL\n", __func__);
+		return FAILED;
+	}
+
+	int tag = cmd->request->tag;
+	struct ufshcd_lrb *lrbp;
+
 	ufshcd_print_cmd_log(hba);
 	lrbp = &hba->lrb[tag];
 	lun = ufshcd_scsi_to_upiu_lun(cmd->device->lun);

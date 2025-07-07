@@ -2588,6 +2588,8 @@ int ufs_qcom_testbus_config(struct ufs_qcom_host *host)
 	mb();
 
 	return 0;
+out:
+	return ret;
 }
 
 static void ufs_qcom_testbus_read(struct ufs_hba *hba)

@@ -77,9 +77,14 @@ jobs:
 
       - name: Telegram - Build Started
         run: |
+          MSG="🚀 *Kernel Build Started!*\n"
+          MSG+="━━━━━━━━━━━━━━━━━━━━━\n"
+          MSG+="🆔 *ID:* \`${{ env.BUILD_ID }}\`\n"
+          MSG+="📦 *Kernel:* \`${{ github.event.inputs.kernel_name }}\`\n"
+          MSG+="🛠️ *Clang:* \`${{ steps.clang.outputs.version }}\`"
           curl -s -X POST https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage \
             -d chat_id=${{ env.TELEGRAM_CHAT_ID }} \
-            -d text="🚀 *Build Started!*\n🆔 \`${{ env.BUILD_ID }}\`\n📦 Kernel: \`${{ github.event.inputs.kernel_name }}\`\n🛠️ Clang: \`${{ steps.clang.outputs.version }}\`" \
+            -d text="$MSG" \
             -d parse_mode=Markdown
 
       - name: Make Defconfig
@@ -150,18 +155,27 @@ jobs:
         if: success()
         run: |
           DURATION=$(( $(date +%s) - ${{ env.BUILD_START }} ))
+          MSG="✅ *Kernel Build Success!*\n"
+          MSG+="━━━━━━━━━━━━━━━━━━━━━\n"
+          MSG+="🆔 *ID:* \`${{ env.BUILD_ID }}\`\n"
+          MSG+="📦 *Output:* \`${{ env.ZIPNAME }}\`\n"
+          MSG+="🕒 *Duration:* ${DURATION}s\n"
 
           CHANGELOG=""
           if [[ "${{ env.DISABLE_DEBUG }}" == "true" ]]; then
-            CHANGELOG+="• Debug configs disabled (CONFIG_DEBUG_INFO=n, CONFIG_DEBUG_KERNEL=n)%0A"
+            CHANGELOG+="• 🔧 Debug configs disabled (\\\`CONFIG_DEBUG_INFO=n\\\`, \\\`CONFIG_DEBUG_KERNEL=n\\\`)\n"
           fi
           if [[ "${{ env.ENABLE_EXPERIMENTAL }}" == "true" ]]; then
-            CHANGELOG+="• Experimental features enabled (e.g. CONFIG_DEBUG_FS)%0A"
+            CHANGELOG+="• 🧪 Experimental features enabled (e.g. \\\`CONFIG_DEBUG_FS\\\`)\n"
+          fi
+
+          if [[ -n "$CHANGELOG" ]]; then
+            MSG+="\n📝 *Changes:*\n${CHANGELOG}"
           fi
 
           curl -s -X POST https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage \
             -d chat_id=${{ env.TELEGRAM_CHAT_ID }} \
-            -d text="✅ *Build Success!*\n🆔 \`${{ env.BUILD_ID }}\`\n📦 \`${{ env.ZIPNAME }}\`\n🕒 Duration: ${DURATION}s\n\n📝 *Changes:*\n${CHANGELOG}" \
+            -d text="$MSG" \
             -d parse_mode=Markdown
 
           curl -s -F document=@${{ env.ZIPNAME }} \

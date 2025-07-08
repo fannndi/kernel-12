@@ -21,6 +21,7 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/cpu.h>
+#include <linux/timerqueue.h>
 #include <soc/qcom/event_timer.h>
 
 /**
@@ -49,12 +50,7 @@ struct hrtimer_info {
 };
 
 static DEFINE_PER_CPU(struct hrtimer_info, per_cpu_hrtimer);
-
-static DEFINE_PER_CPU(struct timerqueue_head, timer_head) = {
-	.head = RB_ROOT,
-	.next = NULL,
-};
-
+static DEFINE_PER_CPU(struct timerqueue_head, timer_head);
 static DEFINE_SPINLOCK(event_timer_lock);
 static DEFINE_SPINLOCK(event_setup_lock);
 
@@ -62,7 +58,7 @@ static void create_timer_smp(void *data);
 static void setup_event_hrtimer(struct event_timer_info *event);
 static enum hrtimer_restart event_hrtimer_cb(struct hrtimer *hrtimer);
 static void irq_affinity_change_notifier(struct irq_affinity_notify *notify,
-						const cpumask_t *new_cpu_mask);
+					 const cpumask_t *new_cpu_mask);
 static void irq_affinity_release(struct kref *ref);
 
 static int msm_event_debug_mask;
@@ -110,6 +106,8 @@ struct event_timer_info *add_event_timer(uint32_t irq,
 
 	/* Init rb node and hr timer */
 	timerqueue_init(&event_info->node);
+	timerqueue_init_head(&per_cpu(timer_head, event_info->cpu));
+
 	pr_debug("New Event Added. Event %p(on cpu%d). irq %d.\n",
 					event_info, event_info->cpu, irq);
 
@@ -289,7 +287,7 @@ static void irq_affinity_release(struct kref *ref)
 }
 
 static void irq_affinity_change_notifier(struct irq_affinity_notify *notify,
-						const cpumask_t *mask_val)
+					 const cpumask_t *mask_val)
 {
 	struct event_timer_info *event;
 	unsigned long flags;

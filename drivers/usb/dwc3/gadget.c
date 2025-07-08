@@ -1265,7 +1265,8 @@ static struct dwc3_trb *dwc3_ep_prev_trb(struct dwc3_ep *dep, u8 index)
 
 static u32 dwc3_calc_trbs_left(struct dwc3_ep *dep)
 {
-	u8			trbs_left;
+	u8 trbs_left;
+	struct dwc3_trb *tmp;
 
 	/*
 	 * If the enqueue & dequeue are equal then the TRB ring is either full

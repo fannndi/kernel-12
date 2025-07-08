@@ -779,6 +779,9 @@ static struct attribute *sugov_attributes[] = {
 	NULL
 };
 
+/* Forward declaration untuk menghindari implicit declaration */
+static void sugov_release_tunables(struct sugov_tunables *tunables);
+
 static void sugov_tunables_free(struct kobject *kobj)
 {
 	struct gov_attr_set *attr_set = container_of(kobj, struct gov_attr_set, kobj);
@@ -796,9 +799,6 @@ static struct kobj_type sugov_tunables_ktype = {
 /********************** cpufreq governor interface *********************/
 
 static struct cpufreq_governor schedutil_gov;
-
-/* Forward declaration to avoid implicit declaration warning */
-static void sugov_release_tunables(struct sugov_tunables *tunables);
 
 static struct sugov_policy *sugov_policy_alloc(struct cpufreq_policy *policy)
 {

@@ -797,6 +797,9 @@ static struct kobj_type sugov_tunables_ktype = {
 
 static struct cpufreq_governor schedutil_gov;
 
+/* Forward declaration to avoid implicit declaration warning */
+static void sugov_release_tunables(struct sugov_tunables *tunables);
+
 static struct sugov_policy *sugov_policy_alloc(struct cpufreq_policy *policy)
 {
 	struct sugov_policy *sg_policy;

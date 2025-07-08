@@ -782,8 +782,9 @@ static struct attribute *sugov_attributes[] = {
 static void sugov_tunables_free(struct kobject *kobj)
 {
 	struct gov_attr_set *attr_set = container_of(kobj, struct gov_attr_set, kobj);
+	struct sugov_tunables *tunables = container_of(attr_set, struct sugov_tunables, attr_set);
 
-	kfree(to_sugov_tunables(attr_set));
+	sugov_release_tunables(tunables);
 }
 
 static struct kobj_type sugov_tunables_ktype = {
@@ -911,14 +912,6 @@ static void sugov_release_tunables(struct sugov_tunables *tunables)
 		global_tunables = NULL;
 
 	kfree(tunables);
-}
-
-static void sugov_tunables_free(struct kobject *kobj)
-{
-	struct gov_attr_set *attr_set = container_of(kobj, struct gov_attr_set, kobj);
-	struct sugov_tunables *tunables = container_of(attr_set, struct sugov_tunables, attr_set);
-
-	sugov_release_tunables(tunables);
 }
 
 static void sugov_tunables_restore(struct cpufreq_policy *policy)

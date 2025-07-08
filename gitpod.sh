@@ -32,7 +32,7 @@ EXPERIMENTAL_DISABLE_CONFIGS=()
 
 # =============== TELEGRAM ===============
 CHATID="-1002354747626"
-TELEGRAM_TOKEN=
+TELEGRAM_TOKEN=""
 TG="${HOME}/telegram/telegram"
 
 if [ ! -f "$TG" ]; then
@@ -139,7 +139,6 @@ build_kernel() {
         KBUILD_USE_RESPONSE_FILE=1 \
         KBUILD_BUILD_USER=$KBUILD_BUILD_USER \
         KBUILD_BUILD_HOST=$KBUILD_BUILD_HOST \
-        CFLAGS_KERNEL="-O2 -fno-stack-protector" \
         Image.gz dtbs 2>&1 | tee "$LOGS"
 
     [ ! -f out/arch/arm64/boot/Image.gz ] && tg_fail

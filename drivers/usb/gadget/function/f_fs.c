@@ -1651,7 +1651,7 @@ invalid:
 
 static struct dentry *
 ffs_fs_mount(struct file_system_type *t, int flags,
-	      const char *dev_name, void *opts)
+	     const char *dev_name, void *opts)
 {
 	struct ffs_sb_fill_data data = {
 		.perms = {
@@ -1664,7 +1664,7 @@ ffs_fs_mount(struct file_system_type *t, int flags,
 	};
 	struct dentry *rv;
 	int ret;
-	struct ffs_data	*ffs;
+	struct ffs_data *ffs;
 
 	ENTER();
 
@@ -1694,10 +1694,10 @@ ffs_fs_mount(struct file_system_type *t, int flags,
 	rv = mount_nodev(t, flags, &data, ffs_sb_fill);
 	if (IS_ERR(rv) && data.ffs_data)
 		ffs_data_put(data.ffs_data);
-	}
 
 	return rv;
 }
+
 
 static void
 ffs_fs_kill_sb(struct super_block *sb)
@@ -3179,7 +3179,7 @@ static int __ffs_func_bind_do_os_desc(enum ffs_os_desc_type type,
 }
 
 static inline struct f_fs_opts *ffs_do_functionfs_bind(struct usb_function *f,
-						struct usb_configuration *c)
+						       struct usb_configuration *c)
 {
 	struct ffs_function *func = ffs_func_from_usb(f);
 	struct f_fs_opts *ffs_opts =
@@ -3189,33 +3189,21 @@ static inline struct f_fs_opts *ffs_do_functionfs_bind(struct usb_function *f,
 
 	ENTER();
 
-	/*
-	 * Legacy gadget triggers binding in functionfs_ready_callback,
-	 * which already uses locking; taking the same lock here would
-	 * cause a deadlock.
-	 *
-	 * Configfs-enabled gadgets however do need ffs_dev_lock.
-	 */
 	if (!ffs_opts->no_configfs)
 		ffs_dev_lock();
+
 	ret = ffs_opts->dev->desc_ready ? 0 : -ENODEV;
-	ffs_data = ffs_opts->dev->ffs_data;
+
 	if (!ffs_opts->no_configfs)
 		ffs_dev_unlock();
+
 	if (ret)
 		return ERR_PTR(ret);
 
-	func->ffs = ffs_data;
+	func->ffs = ffs;
 	func->conf = c;
 	func->gadget = c->cdev->gadget;
 
-	/*
-	 * in drivers/usb/gadget/configfs.c:configfs_composite_bind()
-	 * configurations are bound in sequence with list_for_each_entry,
-	 * in each configuration its functions are bound in sequence
-	 * with list_for_each_entry, so we assume no race condition
-	 * with regard to ffs_opts->bound access
-	 */
 	if (!ffs_opts->refcnt) {
 		ret = functionfs_bind(func->ffs, c->cdev);
 		if (ret) {
@@ -3938,7 +3926,7 @@ static int ffs_acquire_dev(const char *dev_name, struct ffs_data *ffs_data)
 
 	ffs_dev_unlock();
 
-	return ffs_dev;
+	return ret;
 }
 
 static void ffs_release_dev(struct ffs_dev *ffs_dev)

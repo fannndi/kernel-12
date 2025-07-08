@@ -27,16 +27,12 @@ export KBUILD_LDFLAGS="-Wl,--no-keep-memory"
 # =============== EXPERIMENTAL CONFIGS ===============
 EXPERIMENTAL_FEATURES_ENABLED=""
 EXPERIMENTAL_FEATURES_DISABLED=""
-
-EXPERIMENTAL_CONFIGS=(
-    CONFIG_DEBUG_FS
-)
-
+EXPERIMENTAL_CONFIGS=()
 EXPERIMENTAL_DISABLE_CONFIGS=()
 
 # =============== TELEGRAM ===============
 CHATID="-1002354747626"
-TELEGRAM_TOKEN=""
+TELEGRAM_TOKEN="7485743487:AAEKPw9ubSKZKit9BDHfNJSTWcWax4STUZs"
 TG="${HOME}/telegram/telegram"
 
 if [ ! -f "$TG" ]; then
@@ -61,9 +57,12 @@ tg_fail() {
 # =============== TOOLCHAIN ===============
 prepare_toolchain() {
     if [ ! -f "${CLANG_DIR}/bin/ld.lld" ]; then
-        mkdir -p clang && cd clang || exit 1
+        echo "🔧 Clang tidak ditemukan, mendownload..."
+        mkdir -p "$CLANG_DIR" && cd "$CLANG_DIR" || exit 1
         wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz -O - | tar -xz
         cd "$KERNEL_DIR" || exit 1
+    else
+        echo "✅ Clang sudah tersedia, skip download."
     fi
     export PATH="${CLANG_DIR}/bin:$PATH"
 }
@@ -113,10 +112,18 @@ print_env() {
 # =============== BUILD ===============
 build_kernel() {
     rm -rf out && mkdir out
-    make O=out $DEFCONFIG || tg_fail
+
+    echo "🧹 Cleaning source..."
+    make O=out clean
+    make O=out mrproper
+
+    echo "⚙️  Applying defconfig..."
+    make O=out "$DEFCONFIG" || tg_fail
+
     patch_defconfig
     enable_experimental_configs
 
+    echo "🔨 Memulai build..."
     make -j$(nproc) O=out \
         ARCH=arm64 \
         CC=clang \

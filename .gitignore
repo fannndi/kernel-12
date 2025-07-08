@@ -130,4 +130,25 @@ kernel/configs/android-*.cfg
 #Ignoring Android.bp link file
 #
 Android.bp
+
+# [Local Build] Custom additions for Gitpod/local environment
+
+# Folder output build kernel
+/out/
 out/
+
+# Toolchain hasil download manual atau otomatis
+/clang/
+/gcc64/
+/gcc32/
+/toolchain/
+
+# Folder hasil build final ZIP
+/builds/
+*.zip
+
+# Log hasil build
+build.logout/
+
+# Script lokal non-produksi
+gitpod.sh

@@ -32,7 +32,7 @@ EXPERIMENTAL_DISABLE_CONFIGS=()
 
 # =============== TELEGRAM ===============
 CHATID="-1002354747626"
-TELEGRAM_TOKEN="7485743487:AAEKPw9ubSKZKit9BDHfNJSTWcWax4STUZs"
+TELEGRAM_TOKEN=
 TG="${HOME}/telegram/telegram"
 
 if [ ! -f "$TG" ]; then
@@ -56,7 +56,7 @@ tg_fail() {
 
 # =============== TOOLCHAIN ===============
 prepare_toolchain() {
-    if [ ! -f "${CLANG_DIR}/bin/ld.lld" ]; then
+    if ! command -v "${CLANG_DIR}/bin/clang" &>/dev/null; then
         echo "🔧 Clang tidak ditemukan, mendownload..."
         mkdir -p "$CLANG_DIR" && cd "$CLANG_DIR" || exit 1
         wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz -O - | tar -xz
@@ -69,7 +69,9 @@ prepare_toolchain() {
 
 # =============== PATCH DEFCONFIG ===============
 patch_defconfig() {
-    [ ! -f "arch/arm64/configs/${DEFCONFIG}" ] && cp out/.config arch/arm64/configs/${DEFCONFIG}
+    if [ -f "out/.config" ]; then
+        cp out/.config arch/arm64/configs/${DEFCONFIG}
+    fi
     cp arch/arm64/configs/${DEFCONFIG} arch/arm64/configs/${DEFCONFIG}.bak
     sed -i -e '/^CONFIG_LOCALVERSION=/d' -e '/^CONFIG_LOCALVERSION_AUTO=/d' arch/arm64/configs/${DEFCONFIG}
     echo 'CONFIG_LOCALVERSION="-TEST"' >> arch/arm64/configs/${DEFCONFIG}
@@ -78,7 +80,7 @@ patch_defconfig() {
 
 # =============== EXPERIMENTAL CONFIG SETUP ===============
 enable_experimental_configs() {
-    [ ! -x scripts/config ] && return
+    [ ! -x scripts/config ] && make O=out scripts
 
     for conf in "${EXPERIMENTAL_CONFIGS[@]}"; do
         if ! grep -q "^$conf=y" out/.config; then
@@ -123,8 +125,7 @@ build_kernel() {
     patch_defconfig
     enable_experimental_configs
 
-    echo "🔨 Memulai build..."
-    make -j$(nproc) O=out \
+    nice -n10 make -j$(nproc) O=out \
         ARCH=arm64 \
         CC=clang \
         LD=ld.lld \
@@ -138,15 +139,25 @@ build_kernel() {
         KBUILD_USE_RESPONSE_FILE=1 \
         KBUILD_BUILD_USER=$KBUILD_BUILD_USER \
         KBUILD_BUILD_HOST=$KBUILD_BUILD_HOST \
+        CFLAGS_KERNEL="-O2 -fno-stack-protector" \
         Image.gz dtbs 2>&1 | tee "$LOGS"
 
     [ ! -f out/arch/arm64/boot/Image.gz ] && tg_fail
 
-    find out/arch/arm64/boot/dts -name '*.dtb' | sort | xargs cat > dtb.img || tg_fail
-    { cat out/arch/arm64/boot/Image.gz; find out/arch/arm64/boot/dts -name '*.dtb' | sort | xargs cat; } > Image.gz-dtb || tg_fail
+    echo "📦 Menggabungkan Image.gz-dtb..."
+
+    DTB_PATH=$(find out/arch/arm64/boot/ -type f -name '*.dtb' | head -n1 | xargs dirname)
+    if [ -z "$DTB_PATH" ]; then
+        echo "❌ Tidak ditemukan file .dtb!"
+        tg_fail
+    fi
+
+    find "$DTB_PATH" -name '*.dtb' | sort | xargs cat > dtb.img || tg_fail
+    { cat out/arch/arm64/boot/Image.gz; find "$DTB_PATH" -name '*.dtb' | sort | xargs cat; } > Image.gz-dtb || tg_fail
 
     if [ -f "$MKDTBOIMG" ]; then
-        mkdir -p overlay && find out/arch/arm64/boot/dts -name '*.dtbo' -exec cp {} overlay/ \;
+        mkdir -p overlay
+        find "$DTB_PATH" -name '*.dtbo' -exec cp {} overlay/ \;
         if ls overlay/*.dtbo 1> /dev/null 2>&1; then
             python3 "$MKDTBOIMG" create "$DTBO_OUT" --page_size=4096 --id=0 overlay/*.dtbo || tg_fail
         fi
@@ -186,7 +197,7 @@ package_kernel() {
     tg_ship "out/experimental_defconfig_snapshot" "📄 Experimental Defconfig Snapshot"
 
     rm -f Image.gz-dtb dtb.img "$DTBO_OUT" "$ZIPNAME" "$LOGS"
-    rm -rf AnyKernel3 out
+    rm -rf AnyKernel3 out overlay 2>/dev/null
 }
 
 # =============== MAIN ===============

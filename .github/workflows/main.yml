@@ -18,7 +18,7 @@ on:
       disable_debug:
         description: "Disable Debug Configs (e.g. DEBUG_INFO, DEBUG_KERNEL)"
         required: false
-        default: "false"
+        default: "true"
 
 env:
   TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -160,7 +160,8 @@ jobs:
         if: ${{ github.event.inputs.disable_debug == 'true' }}
         run: |
           chmod +x scripts/config
-          scripts/config --file out/.config --disable WIREGUARD
+          scripts/config --file out/.config --disable DEBUG_INFO
+          scripts/config --file out/.config --disable DEBUG_KERNEL
           make O=out ARCH=arm64 olddefconfig
 
       - name: Enable Experimental Options
@@ -211,6 +212,17 @@ jobs:
             echo "::error file=out/arch/arm64/boot/Image.gz::Missing kernel image!"
             exit 1
           }
+
+      - name: Save Final .config Snapshot
+        run: cp out/.config defconfig_snapshot.config
+
+      - name: Telegram - Send Final .config Snapshot
+        if: success()
+        run: |
+          curl -s -F document=@defconfig_snapshot.config \
+            -F caption="🧾 Final .config Snapshot\n🆔 \`${{ env.BUILD_ID }}\`\n📦 \`${{ github.event.inputs.kernel_name }}\`" \
+            -F chat_id=${{ env.TELEGRAM_CHAT_ID }} \
+            https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendDocument
 
       - name: Create Kernel Images
         run: |
@@ -268,7 +280,7 @@ jobs:
             -F caption="✅ Kernel Zip" \
             -F chat_id=${{ env.TELEGRAM_CHAT_ID }} \
             https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendDocument
-    
+
       - name: Telegram - Build Log (Success)
         if: success()
         run: |
@@ -292,6 +304,7 @@ jobs:
           path: |
             log.txt
             out/.config
+            defconfig_snapshot.config
             ${{ env.ZIPNAME }}
 
       - name: Show Final Info

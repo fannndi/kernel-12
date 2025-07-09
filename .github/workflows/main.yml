@@ -14,7 +14,7 @@ on:
       enable_experimental:
         description: "Enable Experimental Features (e.g. DEBUG_FS)"
         required: false
-        default: "false"
+        default: "true"
       disable_debug:
         description: "Disable Debug Configs (e.g. DEBUG_INFO, DEBUG_KERNEL)"
         required: false
@@ -167,7 +167,15 @@ jobs:
         if: ${{ github.event.inputs.enable_experimental == 'true' }}
         run: |
           chmod +x scripts/config
+          scripts/config --file out/.config --enable CRYPTO_AES_ARM64_BS
+          scripts/config --file out/.config --enable CRYPTO_CRC32_ARM64_CE
+          scripts/config --file out/.config --enable CRYPTO_SHA512_ARM64
+          scripts/config --file out/.config --enable CRYPTO_DRBG_HASH
+          scripts/config --file out/.config --enable CRYPTO_DRBG_CTR
           scripts/config --file out/.config --enable CRYPTO_CHACHA20
+          scripts/config --file out/.config --enable CRYPTO_SHA3
+          scripts/config --file out/.config --enable CRYPTO_POLY1305
+          scripts/config --file out/.config --enable CRYPTO_CHACHA20POLY1305
           make O=out ARCH=arm64 olddefconfig
 
       - name: Compile Kernel
@@ -258,6 +266,14 @@ jobs:
 
           curl -s -F document=@${{ env.ZIPNAME }} \
             -F caption="✅ Kernel Zip" \
+            -F chat_id=${{ env.TELEGRAM_CHAT_ID }} \
+            https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendDocument
+    
+      - name: Telegram - Build Log (Success)
+        if: success()
+        run: |
+          curl -s -F document=@log.txt \
+            -F caption="📄 Build Log\n🆔 \`${{ env.BUILD_ID }}\`\n🛠️ Clang: \`${{ steps.clang.outputs.version }}\`" \
             -F chat_id=${{ env.TELEGRAM_CHAT_ID }} \
             https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendDocument
 

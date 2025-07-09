@@ -1,65 +1,53 @@
 #!/bin/bash
 set -euo pipefail
 
-START=$(date +%s)
-
-DEFCONFIG=arch/arm64/configs/surya_defconfig
-BACKUP=${DEFCONFIG}.bak.$(date +%s)
-OUT_DIR=out
-DRY_RUN=0
-KEEP_OUT=0
+# Konfigurasi path
+OUT_DIR="out"
+DEFCONFIG="arch/arm64/configs/surya_defconfig"
+CONFIG_FILE="$OUT_DIR/.config"
+BACKUP="${DEFCONFIG}.bak.$(date +%s)"
 
 # Warna
-RED='\033[0;31m'
-GRN='\033[0;32m'
-YEL='\033[1;33m'
-NC='\033[0m'
+RED="\033[0;31m"
+GRN="\033[0;32m"
+YEL="\033[1;33m"
+NC="\033[0m"
 
-# Argument parsing
-for arg in "$@"; do
-  case $arg in
-    --dry-run) DRY_RUN=1 ;;
-    --keep-out) KEEP_OUT=1 ;;
-    *) echo -e "${RED}❌ Unknown option: $arg${NC}"; exit 1 ;;
-  esac
-done
+# Validasi
+[[ ! -f "$DEFCONFIG" ]] && {
+  echo -e "${RED}❌ Defconfig tidak ditemukan: $DEFCONFIG${NC}"
+  exit 1
+}
 
-command -v make >/dev/null || { echo -e "${RED}❌ 'make' not found!${NC}"; exit 1; }
-
-echo -e "${YEL}🧹 Cleaning $OUT_DIR/ directory...${NC}"
+echo -e "${YEL}🧹 Menghapus folder $OUT_DIR/...${NC}"
 rm -rf "$OUT_DIR"
 
-echo -e "${YEL}📁 Generating .config from $DEFCONFIG...${NC}"
+echo -e "${YEL}📦 Membuat ulang .config dari $DEFCONFIG...${NC}"
 make -s O="$OUT_DIR" ARCH=arm64 surya_defconfig
 
-echo -e "${YEL}🔄 Running olddefconfig to refresh config...${NC}"
+echo -e "${YEL}🔄 Menjalankan make olddefconfig...${NC}"
 make -s O="$OUT_DIR" ARCH=arm64 olddefconfig
 
-echo -e "${YEL}🛡️  Backup: $BACKUP${NC}"
+# Bersihkan semua backup lama
+echo -e "${YEL}🗑️ Menghapus backup lama...${NC}"
+rm -f "${DEFCONFIG}".bak.*
+
+# Backup sebelum menimpa
+echo -e "${YEL}🛡️ Backup defconfig lama ke: $BACKUP${NC}"
 cp "$DEFCONFIG" "$BACKUP"
 
-echo -e "${YEL}📄 Updating $DEFCONFIG...${NC}"
-if [[ $DRY_RUN -eq 1 ]]; then
-  echo -e "${YEL}💡 Dry run enabled. Showing diff:${NC}"
-  diff -u "$DEFCONFIG" "$OUT_DIR/.config" || true
-else
-  cp "$OUT_DIR/.config" "$DEFCONFIG"
-  echo -e "${GRN}✅ Defconfig updated.${NC}"
-fi
+# Timpa defconfig dengan versi terbaru
+cp "$CONFIG_FILE" "$DEFCONFIG"
+echo -e "${GRN}✅ Defconfig diperbarui di: $DEFCONFIG${NC}"
 
-# Tambahkan out/ ke .gitignore
-if [[ ! -f .gitignore ]] || ! grep -Fxq "$OUT_DIR/" .gitignore; then
+# Tambahkan ke .gitignore jika belum ada
+if [[ ! -f .gitignore ]] || ! grep -qxF "$OUT_DIR/" .gitignore; then
   echo "$OUT_DIR/" >> .gitignore
-  echo -e "${GRN}📌 $OUT_DIR/ added to .gitignore${NC}"
+  echo -e "${GRN}📌 Menambahkan $OUT_DIR/ ke .gitignore${NC}"
 fi
 
-# Cleanup jika tidak pakai --keep-out
-if [[ $KEEP_OUT -eq 0 ]]; then
-  echo -e "${YEL}🧽 Cleaning $OUT_DIR/...${NC}"
-  rm -rf "$OUT_DIR"
-else
-  echo -e "${YEL}📦 Keeping $OUT_DIR/ as requested.${NC}"
-fi
+# Bersihkan out setelah selesai
+rm -rf "$OUT_DIR"
+echo -e "${YEL}🧽 Folder $OUT_DIR dibersihkan.${NC}"
 
-END=$(date +%s)
-echo -e "${GRN}⏱️ Finished in $((END - START))s.${NC}"
+echo -e "${GRN}🎉 Selesai! Defconfig berhasil diregenerasi dan dibackup.${NC}"

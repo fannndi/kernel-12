@@ -1273,6 +1273,7 @@ struct drm_gem_object *msm_gem_import(struct drm_device *dev,
 	mutex_lock(&msm_obj->lock);
 	msm_obj->sgt = sgt;
 	msm_obj->pages = NULL;
+
 	/*
 	 * 1) If sg table is NULL, user should call msm_gem_delayed_import
 	 * to add back the sg table to the drm gem object.
@@ -1292,6 +1293,9 @@ struct drm_gem_object *msm_gem_import(struct drm_device *dev,
 	ret = dma_buf_get_flags(dmabuf, &flags);
 	if (ret) {
 		DRM_ERROR("dma_buf_get_flags failure, err=%d\n", ret);
+		mutex_unlock(&msm_obj->lock);
+		drm_gem_object_unreference_unlocked(obj);
+		return ERR_PTR(ret);
 	} else if ((flags & ION_FLAG_CACHED) == 0) {
 		DRM_DEBUG("Buffer is uncached type\n");
 		msm_obj->flags |= MSM_BO_SKIPSYNC;
@@ -1299,10 +1303,6 @@ struct drm_gem_object *msm_gem_import(struct drm_device *dev,
 
 	mutex_unlock(&msm_obj->lock);
 	return obj;
-
-fail:
-	drm_gem_object_unreference_unlocked(obj);
-	return ERR_PTR(ret);
 }
 
 static void *_msm_gem_kernel_new(struct drm_device *dev, uint32_t size,

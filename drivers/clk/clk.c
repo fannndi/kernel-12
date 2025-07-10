@@ -3982,7 +3982,7 @@ static const struct clk_ops clk_nodrv_ops = {
 	.set_parent	= clk_nodrv_set_parent,
 };
 
-static void clk_core_evict_parent_cache_subtree(struct clk_core *root,
+static void __maybe_unused clk_core_evict_parent_cache_subtree(struct clk_core *root,
 						struct clk_core *target)
 {
 	int i;

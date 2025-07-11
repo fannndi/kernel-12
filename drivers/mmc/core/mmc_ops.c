@@ -465,6 +465,7 @@ static int mmc_poll_for_busy(struct mmc_card *card, unsigned int timeout_ms,
 	u32 status = 0;
 	bool expired = false;
 	bool busy = false;
+	int retries = 3;
 
 	/* We have an unspecified cmd timeout, use the fallback value. */
 	if (!timeout_ms)

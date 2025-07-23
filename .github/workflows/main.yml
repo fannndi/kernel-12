@@ -12,20 +12,22 @@ on:
         required: true
         default: "surya_defconfig"
       enable_experimental:
-        description: "Enable Experimental Features (e.g. DEBUG_FS)"
+        description: "Enable Experimental Features"
         required: false
-        default: "true"
+        default: "false"
       disable_debug:
-        description: "Disable Debug Configs (e.g. DEBUG_INFO, DEBUG_KERNEL)"
+        description: "Disable Debug Configs"
         required: false
-        default: "true"
+        default: "false"
 
 env:
-  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
   BUILD_USER: fannndi
   BUILD_HOST: github
+  HOSTCC: gcc-9
+  HOSTCXX: g++-9
   CLANG_TRIPLE: aarch64-linux-gnu-
+  ARCH: arm64
+  SUBARCH: arm64
 
 jobs:
   build:
@@ -33,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Source
+      - name: Checkout Kernel Source
         uses: actions/checkout@v3
 
       - name: Set Timezone & Vars
@@ -42,14 +44,13 @@ jobs:
           BUILD_TIME=$(date '+%d%m%Y-%H%M')
           BUILD_ID=$(date '+%Y%m%d%H%M%S')
           ZIPNAME="${{ github.event.inputs.kernel_name }}-Surya-${BUILD_TIME}.zip"
-          COMMIT_HASH=$(git log --pretty=format:'%h - %s' -1)
           echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
           echo "BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
           echo "ZIPNAME=$ZIPNAME" >> $GITHUB_ENV
           echo "BUILD_START=$(date +%s)" >> $GITHUB_ENV
           echo "DISABLE_DEBUG=${{ github.event.inputs.disable_debug }}" >> $GITHUB_ENV
           echo "ENABLE_EXPERIMENTAL=${{ github.event.inputs.enable_experimental }}" >> $GITHUB_ENV
-          echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
+          echo "COMMIT_HASH=$(git log --pretty=format:'%h - %s' -1)" >> $GITHUB_ENV
 
       - name: Create Swap
         run: |
@@ -61,246 +62,126 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y \
-            abootimg \
-            android-sdk-libsparse-utils \
-            bc \
-            binutils \
-            bison \
-            build-essential \
-            ccache \
-            clang \
-            cmake \
-            cpio \
-            curl \
-            device-tree-compiler \
-            flex \
-            gcc-aarch64-linux-gnu \
-            gcc-arm-linux-gnueabi \
-            gettext \
-            git \
-            jq \
-            kmod \
-            libelf-dev \
-            libfdt-dev \
-            liblz4-tool \
-            libncurses5-dev \
-            libncursesw5-dev \
-            libssl-dev \
-            libudev-dev \
-            libxml2-utils \
-            libzstd-dev \
-            llvm \
-            lsb-release \
-            lz4 \
-            lzop \
-            make \
-            nano \
-            ninja-build \
-            openssl \
-            patchutils \
-            pigz \
-            protobuf-compiler \
-            python-is-python3 \
-            python3 \
-            python3-mako \
-            python3-pip \
-            python3-virtualenv \
-            rsync \
-            unzip \
-            wget \
-            xz-utils \
-            zip \
-            zstd
+          sudo apt install -y --no-install-recommends \
+            clang llvm gcc-9 g++-9 gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
+            abootimg android-sdk-libsparse-utils bc binutils bison build-essential \
+            ccache cmake cpio curl device-tree-compiler flex gettext git jq kmod \
+            libelf-dev libfdt-dev liblz4-tool libncurses5-dev libncursesw5-dev \
+            libssl-dev libudev-dev libxml2-utils libzstd-dev lsb-release lz4 \
+            lzop make nano ninja-build openssl patchutils pigz protobuf-compiler \
+            python-is-python3 python3 python3-mako python3-pip python3-virtualenv \
+            rsync unzip wget xz-utils zip zstd
 
-      - name: Cache Clang
-        uses: actions/cache@v3
-        with:
-          path: clang
-          key: clang-r536225
-
-      - name: Check & Download Clang r536225 (Android 15)
+      - name: Download Clang Android 15
         run: |
-          if [[ ! -f "clang/bin/clang" || ! -f "clang/bin/ld.lld" ]]; then
-            echo "🔽 Downloading Clang..."
+          if [[ ! -f "clang/bin/clang" ]]; then
             mkdir -p clang
             wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz -O - | tar -xz -C clang
           fi
           echo "$GITHUB_WORKSPACE/clang/bin" >> $GITHUB_PATH
           echo "TOOLCHAIN_PATH=$GITHUB_WORKSPACE/clang" >> $GITHUB_ENV
 
-      - name: Get Clang Version
-        id: clang
+      - name: Show Clang Version
+        id: clang_version
         run: echo "version=$(clang/bin/clang --version | head -n1)" >> $GITHUB_OUTPUT
 
-      - name: Clean Output Directory
+      - name: Download GCC 9.3 Toolchain (aarch64)
         run: |
-          echo "🧼 Cleaning build output..."
-          rm -rf out dtb.img dtbo.img Image.gz-dtb AnyKernel3 *.zip log.txt
+          git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-gnu-9.3 gcc9
+          echo "$GITHUB_WORKSPACE/gcc9/bin" >> $GITHUB_PATH
 
-      - name: Telegram - Build Started
+      - name: Download GCC 4.9 Toolchain (arm-linux)
         run: |
-          MSG="🚀 *Kernel Build Started!*\n"
-          MSG+="━━━━━━━━━━━━━━━━━━━━━\n"
-          MSG+="🆔 *ID:* \`${{ env.BUILD_ID }}\`\n"
-          MSG+="📦 *Kernel:* \`${{ github.event.inputs.kernel_name }}\`\n"
-          MSG+="🔖 *Commit:* \`${{ env.COMMIT_HASH }}\`\n"
-          MSG+="🛠️ *Clang:* \`${{ steps.clang.outputs.version }}\`"
-          curl -s -X POST https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage \
-            -d chat_id=${{ env.TELEGRAM_CHAT_ID }} \
-            -d text="$MSG" \
-            -d parse_mode=Markdown
+          git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9 gcc32
+          echo "$GITHUB_WORKSPACE/gcc32/bin" >> $GITHUB_PATH
+
+      - name: Clean Output Directory
+        run: rm -rf out dtb.img Image.gz-dtb AnyKernel3 *.zip log.txt || true
 
       - name: Make Defconfig
         run: |
-          make O=out ARCH=arm64 ${{ github.event.inputs.defconfig }}
-          make O=out ARCH=arm64 olddefconfig
+          export PATH="$GITHUB_WORKSPACE/clang/bin:$GITHUB_WORKSPACE/gcc9/bin:$GITHUB_WORKSPACE/gcc32/bin:$PATH"
+          make O=out ARCH=arm64 SUBARCH=arm64 \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-androideabi- \
+            CC=clang \
+            ${{ github.event.inputs.defconfig }}
+          make O=out ARCH=arm64 SUBARCH=arm64 CC=clang olddefconfig
 
       - name: Disable Debug Options
-        if: ${{ github.event.inputs.disable_debug == 'true' }}
+        if: ${{ env.DISABLE_DEBUG == 'true' }}
         run: |
           chmod +x scripts/config
           scripts/config --file out/.config --disable DEBUG_INFO
-          scripts/config --file out/.config --disable DEBUG_KERNEL
-          make O=out ARCH=arm64 olddefconfig
+          make O=out ARCH=arm64 SUBARCH=arm64 olddefconfig
 
       - name: Enable Experimental Options
-        if: ${{ github.event.inputs.enable_experimental == 'true' }}
+        if: ${{ env.ENABLE_EXPERIMENTAL == 'true' }}
         run: |
           chmod +x scripts/config
-          scripts/config --file out/.config --enable CRYPTO_AES_ARM64_BS
-          scripts/config --file out/.config --enable CRYPTO_CRC32_ARM64_CE
-          scripts/config --file out/.config --enable CRYPTO_SHA512_ARM64
-          scripts/config --file out/.config --enable CRYPTO_DRBG_HASH
-          scripts/config --file out/.config --enable CRYPTO_DRBG_CTR
-          scripts/config --file out/.config --enable CRYPTO_CHACHA20
-          scripts/config --file out/.config --enable CRYPTO_SHA3
-          scripts/config --file out/.config --enable CRYPTO_POLY1305
-          scripts/config --file out/.config --enable CRYPTO_CHACHA20POLY1305
-          make O=out ARCH=arm64 olddefconfig
+          scripts/config --file out/.config --enable DEBUG_FS
+          make O=out ARCH=arm64 SUBARCH=arm64 olddefconfig
 
       - name: Compile Kernel
         run: |
+          # Set PATH ke toolchain
+          export PATH="$GITHUB_WORKSPACE/clang/bin:$GITHUB_WORKSPACE/gcc9/bin:$GITHUB_WORKSPACE/gcc32/bin:$PATH"
+
+          # Export toolchain & metadata
           export CROSS_COMPILE=aarch64-linux-gnu-
-          export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
-          export KBUILD_COMPILER_STRING="${{ steps.clang.outputs.version }}"
+          export CROSS_COMPILE_ARM32=arm-linux-androideabi-
+          export KBUILD_COMPILER_STRING="$($GITHUB_WORKSPACE/clang/bin/clang --version | head -n1)"
+          export KBUILD_BUILD_USER="${BUILD_USER}"
+          export KBUILD_BUILD_HOST="${BUILD_HOST}"
+          unset AS
 
-          JOBS=$(nproc)
-          echo "🧱 Compiling with -j$JOBS"
+          # CPU core & parallelism
+          JOBS=$(nproc --ignore=1)
+          export MAKEFLAGS="-j$JOBS -Oline"
 
-          nice -n10 script -q -c "\
-            make -j${JOBS} O=out \
-              ARCH=arm64 \
-              CC=clang \
-              LD=ld.lld \
-              AS=llvm-as \
-              AR=llvm-ar \
-              NM=llvm-nm \
-              OBJCOPY=llvm-objcopy \
-              OBJDUMP=llvm-objdump \
-              STRIP=llvm-strip \
-              CLANG_TRIPLE=${{ env.CLANG_TRIPLE }} \
-              LLVM=1 \
-              LLVM_IAS=1 \
-              KBUILD_USE_RESPONSE_FILE=1 \
-              KBUILD_VERBOSE=2 V=1 \
-              KBUILD_BUILD_USER=${{ env.BUILD_USER }} \
-              KBUILD_BUILD_HOST=${{ env.BUILD_HOST }} \
-              Image.gz dtbs" | tee log.txt
+          # Logging
+          echo "🔧 Using Clang: $KBUILD_COMPILER_STRING"
+          echo "🧱 Starting Kernel Build at $(date)"
 
-          test -f out/arch/arm64/boot/Image.gz || {
-            echo "::error file=out/arch/arm64/boot/Image.gz::Missing kernel image!"
-            exit 1
-          }
+          # Compile kernel
+          nice -n10 make O=out \
+            ARCH=arm64 SUBARCH=arm64 \
+            CC=clang \
+            LD=ld.lld \
+            AS=llvm-as \
+            AR=llvm-ar \
+            NM=llvm-nm \
+            OBJCOPY=llvm-objcopy \
+            OBJDUMP=llvm-objdump \
+            STRIP=llvm-strip \
+            LLVM=1 LLVM_IAS=1 \
+            KBUILD_USE_RESPONSE_FILE=1 \
+            KCFLAGS="-Wno-error" \
+            KBUILD_VERBOSE=2 \
+            KBUILD_DEBUG=1 \
+            V=2 \
+            Image.gz-dtb 2>&1 | tee log.txt
+
+          echo "✅ Kernel Build Completed at $(date)"
 
       - name: Save Final .config Snapshot
         run: cp out/.config defconfig_snapshot.config
 
-      - name: Telegram - Send Final .config Snapshot
-        if: success()
-        run: |
-          curl -s -F document=@defconfig_snapshot.config \
-            -F caption="🧾 Final .config Snapshot\n🆔 \`${{ env.BUILD_ID }}\`\n📦 \`${{ github.event.inputs.kernel_name }}\`" \
-            -F chat_id=${{ env.TELEGRAM_CHAT_ID }} \
-            https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendDocument
-
       - name: Create Kernel Images
         run: |
           cat out/arch/arm64/boot/Image.gz out/arch/arm64/boot/dts/**/*.dtb > Image.gz-dtb
-          find out/arch/arm64/boot/dts -name '*.dtb' | sort | xargs cat > dtb.img
-
-          DTBO_FILES=$(find out/arch/arm64/boot/dts -name '*.dtbo')
-          if [[ -n "$DTBO_FILES" ]]; then
-            mkdir -p overlay
-            echo "📦 Creating dtbo.img..."
-            wget -qO - https://android.googlesource.com/platform/system/libufdt/+/refs/heads/main/utils/src/mkdtboimg.py?format=TEXT | base64 -d > tools/mkdtboimg.py
-            chmod +x tools/mkdtboimg.py
-            cp $DTBO_FILES overlay/
-            python3 tools/mkdtboimg.py create dtbo.img --page_size=4096 --id=0 overlay/*.dtbo
-            rm -rf overlay tools
-          else
-            echo "⚠️ No .dtbo found, skipping dtbo.img"
-          fi
+          find out/arch/arm64/boot/dts -name '*.dtb' | sort | xargs cat > dtb.img || true
 
       - name: Package with AnyKernel3
         run: |
           git clone --depth=1 https://github.com/rinnsakaguchi/AnyKernel3 -b FSociety
-          cp Image.gz-dtb dtb.img dtbo.img AnyKernel3/ 2>/dev/null || true
-          cd AnyKernel3 && zip -r9 ../${{ env.ZIPNAME }} ./* -x '*.git*' README.md *placeholder
-
-      - name: Telegram - Build Success
-        if: success()
-        run: |
-          DURATION=$(( $(date +%s) - ${{ env.BUILD_START }} ))
-          MSG="✅ *Kernel Build Success!*\n"
-          MSG+="━━━━━━━━━━━━━━━━━━━━━\n"
-          MSG+="🆔 *ID:* \`${{ env.BUILD_ID }}\`\n"
-          MSG+="📦 *Output:* \`${{ env.ZIPNAME }}\`\n"
-          MSG+="🔖 *Commit:* \`${{ env.COMMIT_HASH }}\`\n"
-          MSG+="🕒 *Duration:* ${DURATION}s\n"
-
-          CHANGELOG=""
-          if [[ "${{ env.DISABLE_DEBUG }}" == "true" ]]; then
-            CHANGELOG+="• 🔧 Debug configs disabled (\\\`CONFIG_DEBUG_INFO=n\\\`, \\\`CONFIG_DEBUG_KERNEL=n\\\`)\n"
-          fi
-          if [[ "${{ env.ENABLE_EXPERIMENTAL }}" == "true" ]]; then
-            CHANGELOG+="• 🧪 Experimental features enabled (e.g. \\\`CONFIG_DEBUG_FS\\\`)\n"
-          fi
-
-          if [[ -n "$CHANGELOG" ]]; then
-            MSG+="\n📝 *Changes:*\n${CHANGELOG}"
-          fi
-
-          curl -s -X POST https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage \
-            -d chat_id=${{ env.TELEGRAM_CHAT_ID }} \
-            -d text="$MSG" \
-            -d parse_mode=Markdown
-
-          curl -s -F document=@${{ env.ZIPNAME }} \
-            -F caption="✅ Kernel Zip" \
-            -F chat_id=${{ env.TELEGRAM_CHAT_ID }} \
-            https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendDocument
-
-      - name: Telegram - Build Log (Success)
-        if: success()
-        run: |
-          curl -s -F document=@log.txt \
-            -F caption="📄 Build Log\n🆔 \`${{ env.BUILD_ID }}\`\n🛠️ Clang: \`${{ steps.clang.outputs.version }}\`" \
-            -F chat_id=${{ env.TELEGRAM_CHAT_ID }} \
-            https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendDocument
-
-      - name: Telegram - Build Failed Log
-        if: failure()
-        run: |
-          curl -s -F document=@log.txt \
-            -F caption="❌ Build Failed Log\n🆔 \`${{ env.BUILD_ID }}\`\n🛠️ Clang: \`${{ steps.clang.outputs.version }}\`" \
-            -F chat_id=${{ env.TELEGRAM_CHAT_ID }} \
-            https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendDocument
+          cp Image.gz-dtb dtb.img AnyKernel3/ 2>/dev/null || true
+          cd AnyKernel3 && zip -r9 ../${{ env.ZIPNAME }} . -x '*.git*' README.md *placeholder
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-outputs
+          name: build-${{ env.BUILD_ID }}
           path: |
             log.txt
             out/.config
@@ -310,6 +191,7 @@ jobs:
       - name: Show Final Info
         if: success()
         run: |
+          echo "✅ Build Finished!"
           echo "🕒 Duration: $(( $(date +%s) - ${{ env.BUILD_START }} ))s"
           du -sh "${{ env.ZIPNAME }}"
           sha1sum "${{ env.ZIPNAME }}"

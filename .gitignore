@@ -141,7 +141,8 @@ out/
 /clang/
 /gcc64/
 /gcc32/
-/toolchain/
+/toolchains/
+/build-artifacts/
 
 # Folder hasil build final ZIP
 /builds/

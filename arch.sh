@@ -2,6 +2,8 @@
 set -euo pipefail
 shopt -s nocasematch
 
+#Ngenggg
+
 # Fix for Arch Linux python issue
 if [[ "$(python --version 2>/dev/null)" == *"Python 3"* ]]; then
     alias python3=python
